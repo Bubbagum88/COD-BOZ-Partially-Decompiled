@@ -195,13 +195,11 @@ class s3eTouchpad {
             val x: Int
             val y: Int
             if (pointerId == LOOK_POINTER) {
-                // Look stick: extra gain plus the full width of the right half for turning, clamped
-                // so the finger never crosses into the movement half. Touch-screen looking is a
-                // separate path and unaffected; the in-game sensitivity option still scales this.
-                val rx = halfW / 2 - 1
-                val ry = m_Height / 2 - 1
-                x = (cx + (ax * LOOK_GAIN * rx).toInt()).coerceIn(halfW + 1, m_Width - 1)
-                y = (cy + (ay * LOOK_GAIN * ry).toInt()).coerceIn(0, m_Height - 1)
+                // Look stick: a flat gain on both axes, clamped so the finger stays on the pad and
+                // never crosses into the movement half. Touch-screen looking is a separate path and
+                // unaffected; the in-game sensitivity option still scales this.
+                x = (cx + (ax * LOOK_GAIN * radius).toInt()).coerceIn(halfW + 1, m_Width - 1)
+                y = (cy + (ay * LOOK_GAIN * radius).toInt()).coerceIn(0, m_Height - 1)
             } else {
                 x = cx + (ax * radius).toInt()
                 y = cy + (ay * radius).toInt()
