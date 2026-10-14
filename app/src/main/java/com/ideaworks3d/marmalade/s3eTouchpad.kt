@@ -152,9 +152,10 @@ class s3eTouchpad {
             val cx = if (pointerId == 0) halfW / 2 else halfW + halfW / 2
             val cy = m_Height / 2
             val radius = minOf(halfW, m_Height) / 2 - 1
-            // Engine Y grows upwards (onTouchEvent flips it), and stick-up is negative AXIS_Y.
+            // Stick-up (negative AXIS_Y) must map to lower pad Y: tested on device, the
+            // opposite sign flipped forward/back movement and inverted the look axis.
             val x = cx + (ax * radius).toInt()
-            val y = cy - (ay * radius).toInt()
+            val y = cy + (ay * radius).toInt()
             if (active && !stickDown[pointerId]) {
                 onMotionEvent(pointerId, S3E_DOWN, cx, cy)
                 onMotionEvent(pointerId, S3E_MOVE, x, y)

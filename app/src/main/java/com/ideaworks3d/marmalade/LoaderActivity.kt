@@ -244,8 +244,12 @@ open class LoaderActivity : Activity() {
         m_LoaderThread = LoaderThread.getInstance(this, assets, filesDir, m_View!!)
     }
 
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean =
-        if (s3eTouchpad.onTouchEvent(ev)) true else super.dispatchTouchEvent(ev)
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (s3eTouchpad.onTouchEvent(ev)) return true
+        // Touch screen: unchanged path into the game; the controller sticks yield while a finger is down.
+        m_Gamepad.onScreenTouch(ev)
+        return super.dispatchTouchEvent(ev)
+    }
 
     // Analog sticks, hat D-pads and analog triggers arrive as generic motion events.
     override fun onGenericMotionEvent(event: MotionEvent): Boolean =

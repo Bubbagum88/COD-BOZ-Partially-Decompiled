@@ -33,6 +33,7 @@ class GamepadInput(
     private val inputManager = context.getSystemService(Context.INPUT_SERVICE) as InputManager
     private val devices = HashMap<Int, DeviceState>()
     private var activeDevice = NO_DEVICE
+    private var screenTouched = false // a finger on the touch screen has priority over the sticks
 
     fun start() = inputManager.registerInputDeviceListener(this, null)
 
@@ -88,7 +89,7 @@ class GamepadInput(
         }
         state.engaged = engagedNow
 
-        if (id == activeDevice) {
+        if (id == activeDevice && !screenTouched) {
             s3eTouchpad.updateVirtualStick(0, lx, ly, leftDeadzone)
             s3eTouchpad.updateVirtualStick(1, rx, ry, rightDeadzone)
         }
@@ -107,6 +108,17 @@ class GamepadInput(
             setHeld(state, KeyEvent.KEYCODE_BUTTON_R2, triggerHeld(state, KeyEvent.KEYCODE_BUTTON_R2, rt))
         }
         return true
+    }
+
+    /**
+     * Touch-screen priority: while any finger is on the screen the sticks are paused (and
+     * lifted), so on-screen move/look controls never fight the controller. Buttons are unaffected.
+     */
+    fun onScreenTouch(event: MotionEvent) {
+        val touching = event.actionMasked != MotionEvent.ACTION_UP &&
+            event.actionMasked != MotionEvent.ACTION_CANCEL
+        if (touching && !screenTouched) s3eTouchpad.releaseVirtualSticks()
+        screenTouched = touching
     }
 
     /** Releases every held stick and synthesized key (focus loss, pause). */
