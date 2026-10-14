@@ -34,6 +34,9 @@ class GamepadInput(
     private val devices = HashMap<Int, DeviceState>()
     private var activeDevice = NO_DEVICE
     private var screenTouched = false // a finger on the touch screen has priority over the sticks
+    // Last stick values from the active controller, re-applied when a finger lifts
+    // (a stick held steady sends no new events): lx, ly, rx, ry, left and right dead zones.
+    private val lastSticks = FloatArray(6)
 
     fun start() = inputManager.registerInputDeviceListener(this, null)
 
@@ -89,9 +92,10 @@ class GamepadInput(
         }
         state.engaged = engagedNow
 
-        if (id == activeDevice && !screenTouched) {
-            s3eTouchpad.updateVirtualStick(0, lx, ly, leftDeadzone)
-            s3eTouchpad.updateVirtualStick(1, rx, ry, rightDeadzone)
+        if (id == activeDevice) {
+            lastSticks[0] = lx; lastSticks[1] = ly; lastSticks[2] = rx; lastSticks[3] = ry
+            lastSticks[4] = leftDeadzone; lastSticks[5] = rightDeadzone
+            if (!screenTouched) applySticks()
         }
 
         // D-pad and triggers act as buttons from any controller.
@@ -117,8 +121,15 @@ class GamepadInput(
     fun onScreenTouch(event: MotionEvent) {
         val touching = event.actionMasked != MotionEvent.ACTION_UP &&
             event.actionMasked != MotionEvent.ACTION_CANCEL
-        if (touching && !screenTouched) s3eTouchpad.releaseVirtualSticks()
+        val wasTouched = screenTouched
         screenTouched = touching
+        if (touching && !wasTouched) s3eTouchpad.releaseVirtualSticks()
+        if (!touching && wasTouched && activeDevice != NO_DEVICE) applySticks()
+    }
+
+    private fun applySticks() {
+        s3eTouchpad.updateVirtualStick(0, lastSticks[0], lastSticks[1], lastSticks[4])
+        s3eTouchpad.updateVirtualStick(1, lastSticks[2], lastSticks[3], lastSticks[5])
     }
 
     /** Releases every held stick and synthesized key (focus loss, pause). */
@@ -127,6 +138,7 @@ class GamepadInput(
             releaseKeys(state)
             state.engaged = false
         }
+        lastSticks.fill(0f)
         s3eTouchpad.releaseVirtualSticks()
     }
 
@@ -138,6 +150,7 @@ class GamepadInput(
         val state = devices.remove(deviceId) ?: return
         releaseKeys(state)
         if (deviceId == activeDevice) {
+            lastSticks.fill(0f)
             s3eTouchpad.releaseVirtualSticks()
             activeDevice = NO_DEVICE
         }
