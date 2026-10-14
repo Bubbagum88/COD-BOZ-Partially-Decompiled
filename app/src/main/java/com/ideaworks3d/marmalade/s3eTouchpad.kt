@@ -2,10 +2,12 @@ package com.ideaworks3d.marmalade
 
 import android.content.res.Configuration
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.ViewParent
+import java.io.File
 
 class s3eTouchpad {
     private var processPositionEvents = false
@@ -50,6 +52,25 @@ class s3eTouchpad {
         return true
     }
 
+    // Test switch, flipped live over ADB without rebuilding:
+    //   adb shell run-as com.activision.boz touch files/pad_hidden   -> virtual pad reports unavailable
+    //   adb shell run-as com.activision.boz rm files/pad_hidden      -> back to available
+    // Shows whether the engine still reads the sticks when the pad is "unavailable"
+    // (touch schemes and controller together) or needs a live switch between them.
+    private var padHiddenCheckedAt = 0L
+    private var padHidden = false
+
+    private fun isPadHidden(): Boolean {
+        val now = SystemClock.uptimeMillis()
+        if (now - padHiddenCheckedAt > 1000) {
+            padHiddenCheckedAt = now
+            val hidden = File(LoaderActivity.m_Activity!!.filesDir, "pad_hidden").exists()
+            if (hidden != padHidden) Log.i(LOG_TAG, "pad_hidden test switch -> $hidden")
+            padHidden = hidden
+        }
+        return padHidden
+    }
+
     private fun hasAnalogController(): Boolean = InputDevice.getDeviceIds().any { id ->
         val sources = InputDevice.getDevice(id)?.sources ?: 0
         sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
@@ -70,7 +91,7 @@ class s3eTouchpad {
                 Log.i(LOG_TAG, "AVAILABLE query #$availableQueries (device=$inputDeviceId)")
             }
             if (inputDeviceId == -1) return 0
-            if (inputDeviceId == VIRTUAL_DEVICE_ID) return 1
+            if (inputDeviceId == VIRTUAL_DEVICE_ID) return if (isPadHidden()) 0 else 1
             val cfg: Configuration = LoaderActivity.m_Activity!!.resources.configuration
             val legacyId = "3.0.A.2."
             try {
