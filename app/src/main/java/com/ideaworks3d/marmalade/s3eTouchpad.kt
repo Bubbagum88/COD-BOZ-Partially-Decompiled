@@ -2,17 +2,13 @@ package com.ideaworks3d.marmalade
 
 import android.content.res.Configuration
 import android.os.Build
-import android.os.SystemClock
-import android.util.Log
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.ViewParent
-import java.io.File
 
 class s3eTouchpad {
     private var processPositionEvents = false
     private var inputDeviceId = -1
-    private var availableQueries = 0L
 
     fun s3eTouchpadInit(): Boolean {
         val ids = InputDevice.getDeviceIds()
@@ -40,7 +36,6 @@ class s3eTouchpad {
         // expose a virtual Xperia Play-sized pad driven by its analog sticks.
         if (!hasAnalogController()) {
             trace("Couldn't detect touchpad or analog controller")
-            Log.i(LOG_TAG, "init: no touchpad and no analog controller -> no pad")
             return false
         }
         m_Width = VIRTUAL_WIDTH
@@ -48,27 +43,7 @@ class s3eTouchpad {
         inputDeviceId = VIRTUAL_DEVICE_ID
         virtualPad = true
         trace("No touchpad found; using virtual stick pad m_Width: $m_Width m_Height: $m_Height")
-        Log.i(LOG_TAG, "init: virtual stick pad ${m_Width}x$m_Height")
         return true
-    }
-
-    // Test switch, flipped live over ADB without rebuilding:
-    //   adb shell run-as com.activision.boz touch files/pad_shown   -> virtual pad reports available
-    //   adb shell run-as com.activision.boz rm files/pad_shown      -> back to the default (not available)
-    // "Available" makes the game lock into its pad scheme (touch schemes and the on-screen
-    // camera stick stop working), so it is only kept for comparison.
-    private var padShownCheckedAt = 0L
-    private var padShown = false
-
-    private fun isPadShown(): Boolean {
-        val now = SystemClock.uptimeMillis()
-        if (now - padShownCheckedAt > 1000) {
-            padShownCheckedAt = now
-            val shown = File(LoaderActivity.m_Activity!!.filesDir, "pad_shown").exists()
-            if (shown != padShown) Log.i(LOG_TAG, "pad_shown test switch -> $shown")
-            padShown = shown
-        }
-        return padShown
     }
 
     private fun hasAnalogController(): Boolean = InputDevice.getDeviceIds().any { id ->
@@ -85,15 +60,11 @@ class s3eTouchpad {
     fun s3eTouchpadGetInt(prop: Int): Int {
         if (prop == S3E_TOUCHPAD_AVAILABLE) {
             LoaderAPI.trace("Touchpad GetInt S3E_TOUCHPAD_AVAILABLE")
-            // Diagnostic: how often does the engine ask? (decides whether a live "virtual slider" can work)
-            availableQueries++
-            if (availableQueries <= 30 || availableQueries % 200 == 0L) {
-                Log.i(LOG_TAG, "AVAILABLE query #$availableQueries (device=$inputDeviceId)")
-            }
             if (inputDeviceId == -1) return 0
-            // Virtual pad reports "not available" by default, like the original game, so the
-            // touch-control schemes stay intact; the sticks still feed it via onMotionEvent.
-            if (inputDeviceId == VIRTUAL_DEVICE_ID) return if (isPadShown()) 1 else 0
+            // The virtual pad always reports "not available", like the original game. "Available"
+            // only switches the HUD into the Xperia layout and locks touch to dual-stick (with a
+            // dead on-screen camera stick); the engine reads the stick input either way.
+            if (inputDeviceId == VIRTUAL_DEVICE_ID) return 0
             val cfg: Configuration = LoaderActivity.m_Activity!!.resources.configuration
             val legacyId = "3.0.A.2."
             try {
@@ -142,7 +113,6 @@ class s3eTouchpad {
 
     companion object {
         private const val SOURCE_TOUCHPAD = 1048584
-        private const val LOG_TAG = "BOZPad"
         private var m_Width = 0
         private var m_Height = 0
 
