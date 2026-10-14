@@ -32,8 +32,7 @@ open class IsDeviceActivity : LoaderActivity() {
         private const val REQ_CODE_WRITE_STORAGE = 0x5354
         @JvmStatic
         private var m_Activity: IsDeviceActivity? = null
-        // Survives recreate() within the process, so the HUD question is asked once per launch.
-        private var hudAskedThisLaunch = false
+        private const val KEY_HUD_ASKED = "hud_asked"
 
         // Called by Marmalade's s3eLibraryLoad / libIsDevice.so.
         // Native code resolves this exact static symbol by name — do not rename.
@@ -134,7 +133,18 @@ open class IsDeviceActivity : LoaderActivity() {
             .show()
     }
 
+    // Per game screen, not per process: Android often keeps the process alive between boots,
+    // so a process-wide flag skipped the question on later launches. Carried only across the
+    // recreate() the prompt itself triggers (via saved state); every fresh boot asks again.
+    private var hudAskedThisLaunch = false
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putBoolean(KEY_HUD_ASKED, hudAskedThisLaunch)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
+        hudAskedThisLaunch = savedInstanceState?.getBoolean(KEY_HUD_ASKED, false) ?: false
         SavesRestoring.doSmth(this)
 
         // Set cutout mode before super.onCreate or setContentView
