@@ -15,6 +15,9 @@ import android.os.Handler
 import android.os.Message
 import android.os.PowerManager
 import android.os.Process
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.OrientationEventListener
@@ -37,6 +40,7 @@ open class LoaderActivity : Activity() {
     private var m_ProgressDialogHandler: Handler? = null
     private var m_orientationEventListener: OrientationEventListener? = null
     private var m_LegacySuspendMode = false
+    private val m_Gamepad: GamepadInput by lazy { GamepadInput(this, this::sendGamepadKey) }
 
     private external fun onOrientationChangedNative()
     private external fun setART(art: Boolean)
@@ -106,6 +110,7 @@ open class LoaderActivity : Activity() {
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         trace("XXX onWindowFocusChanged XXX $hasFocus")
+        if (!hasFocus) m_Gamepad.releaseAll()
         super.onWindowFocusChanged(hasFocus)
         trace("XXX onWindowFocusChanged done XXX")
     }
@@ -146,6 +151,7 @@ open class LoaderActivity : Activity() {
     public override fun onResume() {
         trace("XXX onResume XXX")
         super.onResume()
+        m_Gamepad.start()
         if (isScreenLocked) {
             trace("XXX onResume screen is locked, will not resume the app immediately XXX")
             if (isScreenOn) {
@@ -163,6 +169,7 @@ open class LoaderActivity : Activity() {
 
     override fun onPause() {
         trace("XXX onPause XXX")
+        m_Gamepad.stop()
         if (isReadyForSuspend(true)) {
             trace("XXX onPause not multi-window XXX")
             m_LoaderThread?.onStop()
@@ -240,16 +247,38 @@ open class LoaderActivity : Activity() {
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean =
         if (s3eTouchpad.onTouchEvent(ev)) true else super.dispatchTouchEvent(ev)
 
+    // Analog sticks, hat D-pads and analog triggers arrive as generic motion events.
+    override fun onGenericMotionEvent(event: MotionEvent): Boolean =
+        if (m_Gamepad.onMotion(event)) true else super.onGenericMotionEvent(event)
+
+    // Sends a D-pad or trigger press synthesized by GamepadInput down the normal key path.
+    private fun sendGamepadKey(keyCode: Int, down: Boolean) {
+        val now = SystemClock.uptimeMillis()
+        val action = if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP
+        val event = KeyEvent(now, now, action, keyCode, 0, 0, KeyCharacterMap.VIRTUAL_KEYBOARD, 0, 0, InputDevice.SOURCE_GAMEPAD)
+        onKeyEvent(xperiaKeyCode(keyCode), if (down) 1 else 0, event)
+    }
+
     private fun onKeyEvent(keyCode: Int, action: Int, event: KeyEvent): Boolean {
         trace("onKeyEvent $keyCode")
         return if (m_View != null) m_View!!.onKeyEvent(keyCode, action, event) else false
     }
 
+    // Standard gamepad buttons -> the Xperia Play key codes the engine already understands
+    // (Xperia: Cross = DPAD_CENTER to confirm, Circle = BACK to go back; Square/Triangle already match X/Y).
+    private fun xperiaKeyCode(keyCode: Int): Int = when (keyCode) {
+        KeyEvent.KEYCODE_BUTTON_A -> KeyEvent.KEYCODE_DPAD_CENTER
+        KeyEvent.KEYCODE_BUTTON_B -> KeyEvent.KEYCODE_BACK
+        else -> keyCode
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
-        if (onKeyEvent(keyCode, 1, event)) true else super.onKeyDown(keyCode, event)
+        if (m_Gamepad.shouldForwardKey(event) && onKeyEvent(xperiaKeyCode(keyCode), 1, event)) true
+        else super.onKeyDown(keyCode, event)
 
     override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean =
-        if (onKeyEvent(keyCode, 0, event)) true else super.onKeyUp(keyCode, event)
+        if (m_Gamepad.shouldForwardKey(event) && onKeyEvent(xperiaKeyCode(keyCode), 0, event)) true
+        else super.onKeyUp(keyCode, event)
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!event.characters.isNullOrEmpty() && event.keyCode == 0) {

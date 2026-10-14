@@ -32,8 +32,13 @@ class s3eTouchpad {
                 }
             }
         }
-        trace("Couldn't detect touchpad")
-        return false
+        // No physical touchpad: expose a virtual Xperia Play-sized pad driven by the analog sticks.
+        m_Width = VIRTUAL_WIDTH
+        m_Height = VIRTUAL_HEIGHT
+        inputDeviceId = VIRTUAL_DEVICE_ID
+        virtualPad = true
+        trace("No touchpad found; using virtual stick pad m_Width: $m_Width m_Height: $m_Height")
+        return true
     }
 
     fun s3eTouchpadTerminate() {
@@ -46,6 +51,7 @@ class s3eTouchpad {
         if (prop == S3E_TOUCHPAD_AVAILABLE) {
             LoaderAPI.trace("Touchpad GetInt S3E_TOUCHPAD_AVAILABLE")
             if (inputDeviceId == -1) return 0
+            if (inputDeviceId == VIRTUAL_DEVICE_ID) return 1
             val cfg: Configuration = LoaderActivity.m_Activity!!.resources.configuration
             val legacyId = "3.0.A.2."
             try {
@@ -100,6 +106,56 @@ class s3eTouchpad {
         const val S3E_TOUCHPAD_AVAILABLE = 0
         const val S3E_TOUCHPAD_WIDTH = 1
         const val S3E_TOUCHPAD_HEIGHT = 2
+
+        // Virtual touchpad (Xperia Play pad size) fed by the analog sticks.
+        private const val VIRTUAL_DEVICE_ID = -2
+        private const val VIRTUAL_WIDTH = 966
+        private const val VIRTUAL_HEIGHT = 360
+        // Action codes the engine expects: Android action + 4 (down 4, up 5, move 6).
+        private const val S3E_DOWN = MotionEvent.ACTION_DOWN + 4
+        private const val S3E_UP = MotionEvent.ACTION_UP + 4
+        private const val S3E_MOVE = MotionEvent.ACTION_MOVE + 4
+        private var virtualPad = false
+        private val stickDown = booleanArrayOf(false, false)
+
+        /** True once the engine has initialised the touchpad and no physical one exists. */
+        @JvmStatic
+        fun hasVirtualPad(): Boolean = virtualPad
+
+        /** Lifts both virtual fingers (controller switched, disconnected, or focus lost). */
+        @JvmStatic
+        fun releaseVirtualSticks() {
+            for (pointerId in stickDown.indices) {
+                updateVirtualStick(pointerId, 0f, 0f, 1f)
+            }
+        }
+
+        /**
+         * Left stick = finger 0 on the left half of the pad, right stick = finger 1 on the right half.
+         * The finger touches down when the stick leaves its dead zone and lifts when it returns.
+         */
+        @JvmStatic
+        fun updateVirtualStick(pointerId: Int, ax: Float, ay: Float, deadzone: Float) {
+            if (!virtualPad) return
+            val active = ax * ax + ay * ay > deadzone * deadzone
+            val halfW = m_Width / 2
+            val cx = if (pointerId == 0) halfW / 2 else halfW + halfW / 2
+            val cy = m_Height / 2
+            val radius = minOf(halfW, m_Height) / 2 - 1
+            // Engine Y grows upwards (onTouchEvent flips it), and stick-up is negative AXIS_Y.
+            val x = cx + (ax * radius).toInt()
+            val y = cy - (ay * radius).toInt()
+            if (active && !stickDown[pointerId]) {
+                onMotionEvent(pointerId, S3E_DOWN, cx, cy)
+                onMotionEvent(pointerId, S3E_MOVE, x, y)
+                stickDown[pointerId] = true
+            } else if (active) {
+                onMotionEvent(pointerId, S3E_MOVE, x, y)
+            } else if (stickDown[pointerId]) {
+                onMotionEvent(pointerId, S3E_UP, cx, cy)
+                stickDown[pointerId] = false
+            }
+        }
 
         @JvmStatic
         external fun onMotionEvent(pointerId: Int, action: Int, x: Int, y: Int)

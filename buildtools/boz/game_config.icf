@@ -191,7 +191,7 @@ MARKET_BILLING=0
 ZEROCONF = 0
 ZEROCONF_VERBOSE = 0
 S3E_MESSAGE_CONTINUE_STOP_IGNORE = 0
-TOUCHPAD_VERBOSE = 0
+TOUCHPAD_VERBOSE = 1
 [ISBENCHMARK]
 METRIC_0	= 5	#FRAMERATE
 METRIC_1	= 1	#IW_GX_METRIC_VERTS_TRANSFORMED
@@ -245,7 +245,7 @@ ResBuild=0				# Uncomment to disable resource building
 Binarise=0					# Uncomment to binarise
 BuyWithCODPointsActive=1	# 1 If buying ingame stuff with COD points is enabled
 TabletThreshold = 461			# Uncomment to use default values set in Native Code
-XperiaDeviceID = "R800|R800i|R800x|R800a|R800at"
+XperiaDeviceID = "R800|R800i|R800x|R800a|R800at|Odin_M0"
 [GL]
 EGL_DEPTH_ENCODING_NV=0x30E3
 [DEBUG]
