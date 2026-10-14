@@ -269,10 +269,12 @@ open class LoaderActivity : Activity() {
     }
 
     // Standard gamepad buttons -> the Xperia Play key codes the engine already understands.
-    // A = Cross (DPAD_CENTER, confirm). Select = the Xperia's Circle (BACK), which the game treats
-    // as back/pause. B is not BACK, so it never pauses. Square/Triangle already match X/Y.
+    // A = Cross (DPAD_CENTER, confirm). Select = BACK (back/pause). B = R: the Xperia binding sets
+    // in blackops_loader.dz are patched to put Circle's reload (Dead Ops: aim right) on R instead of
+    // BACK, which the engine also treats as pause. Square/Triangle already match X/Y.
     private fun xperiaKeyCode(keyCode: Int): Int = when (keyCode) {
         KeyEvent.KEYCODE_BUTTON_A -> KeyEvent.KEYCODE_DPAD_CENTER
+        KeyEvent.KEYCODE_BUTTON_B -> KeyEvent.KEYCODE_R
         KeyEvent.KEYCODE_BUTTON_SELECT -> KeyEvent.KEYCODE_BACK
         else -> keyCode
     }
