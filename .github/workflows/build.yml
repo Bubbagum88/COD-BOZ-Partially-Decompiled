@@ -3,12 +3,16 @@ name: Build APK
 on:
   push:
     branches: [master, controller-support]
+    # Pushing a tag such as v1.0.8.1-controller.1 also publishes a GitHub release.
+    tags: ["v*"]
   workflow_dispatch:
 
 jobs:
   build:
     # Pinned so the ubuntu-latest move to Ubuntu 26 cannot change the build unexpectedly.
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write # needed only by the release step on tag pushes
     steps:
       - uses: actions/checkout@v5
 
@@ -66,3 +70,19 @@ jobs:
         with:
           name: boz-${{ github.ref_name }}
           path: boz-*.apk
+
+      # Tag pushes only. Refuses to publish a throwaway-debug-key build, so every
+      # released APK installs over the previous release without an uninstall.
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ls boz-*-debugkey.apk > /dev/null 2>&1; then
+            echo "::error::Signing secrets missing; not publishing a debug-key build as a release."
+            exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" boz-*.apk \
+            --title "$GITHUB_REF_NAME" \
+            --notes "Built and signed by GitHub Actions from $GITHUB_SHA." \
+            --generate-notes
