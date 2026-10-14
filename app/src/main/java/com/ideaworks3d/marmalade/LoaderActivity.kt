@@ -268,21 +268,33 @@ open class LoaderActivity : Activity() {
         return if (m_View != null) m_View!!.onKeyEvent(keyCode, action, event) else false
     }
 
-    // Standard gamepad buttons -> the Xperia Play key codes the engine already understands
-    // (Xperia: Cross = DPAD_CENTER to confirm, Circle = BACK to go back; Square/Triangle already match X/Y).
+    // Standard gamepad buttons -> the Xperia Play key codes the engine already understands.
+    // A = Cross (DPAD_CENTER, confirm). B and Select both send the Xperia's Circle (BACK): the
+    // game binds it to reload in play and to back in menus. Square/Triangle already match X/Y.
     private fun xperiaKeyCode(keyCode: Int): Int = when (keyCode) {
         KeyEvent.KEYCODE_BUTTON_A -> KeyEvent.KEYCODE_DPAD_CENTER
-        KeyEvent.KEYCODE_BUTTON_B -> KeyEvent.KEYCODE_BACK
+        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BUTTON_SELECT -> KeyEvent.KEYCODE_BACK
         else -> keyCode
     }
 
-    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean =
-        if (m_Gamepad.shouldForwardKey(event) && onKeyEvent(xperiaKeyCode(keyCode), 1, event)) true
-        else super.onKeyDown(keyCode, event)
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = onGameKey(keyCode, event, 1)
 
-    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean =
-        if (m_Gamepad.shouldForwardKey(event) && onKeyEvent(xperiaKeyCode(keyCode), 0, event)) true
-        else super.onKeyUp(keyCode, event)
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean = onGameKey(keyCode, event, 0)
+
+    private fun onGameKey(keyCode: Int, event: KeyEvent, action: Int): Boolean {
+        val handled = m_Gamepad.shouldForwardKey(event) && onKeyEvent(xperiaKeyCode(keyCode), action, event)
+        return when {
+            handled -> true
+            // B is reload only: never let Android turn an unclaimed B into system Back (pause).
+            keyCode == KeyEvent.KEYCODE_BUTTON_B -> true
+            // Select is Back: when the game doesn't claim it, fall back to Android's Back.
+            keyCode == KeyEvent.KEYCODE_BUTTON_SELECT ->
+                if (action == 1) super.onKeyDown(KeyEvent.KEYCODE_BACK, event)
+                else super.onKeyUp(KeyEvent.KEYCODE_BACK, event)
+            action == 1 -> super.onKeyDown(keyCode, event)
+            else -> super.onKeyUp(keyCode, event)
+        }
+    }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (!event.characters.isNullOrEmpty() && event.keyCode == 0) {
