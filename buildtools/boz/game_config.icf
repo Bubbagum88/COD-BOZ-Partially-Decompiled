@@ -245,7 +245,7 @@ ResBuild=0				# Uncomment to disable resource building
 Binarise=0					# Uncomment to binarise
 BuyWithCODPointsActive=1	# 1 If buying ingame stuff with COD points is enabled
 TabletThreshold = 461			# Uncomment to use default values set in Native Code
-XperiaDeviceID = "R800|R800i|R800x|R800a|R800at|Odin_M0"
+XperiaDeviceID = "R800|R800i|R800x|R800a|R800at"
 [GL]
 EGL_DEPTH_ENCODING_NV=0x30E3
 [DEBUG]
