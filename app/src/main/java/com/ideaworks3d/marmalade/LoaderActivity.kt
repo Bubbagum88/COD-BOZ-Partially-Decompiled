@@ -269,11 +269,11 @@ open class LoaderActivity : Activity() {
     }
 
     // Standard gamepad buttons -> the Xperia Play key codes the engine already understands.
-    // A = Cross (DPAD_CENTER, confirm). B and Select both send the Xperia's Circle (BACK): the
-    // game binds it to reload in play and to back in menus. Square/Triangle already match X/Y.
+    // A = Cross (DPAD_CENTER, confirm). Select = the Xperia's Circle (BACK), which the game treats
+    // as back/pause. B is not BACK, so it never pauses. Square/Triangle already match X/Y.
     private fun xperiaKeyCode(keyCode: Int): Int = when (keyCode) {
         KeyEvent.KEYCODE_BUTTON_A -> KeyEvent.KEYCODE_DPAD_CENTER
-        KeyEvent.KEYCODE_BUTTON_B, KeyEvent.KEYCODE_BUTTON_SELECT -> KeyEvent.KEYCODE_BACK
+        KeyEvent.KEYCODE_BUTTON_SELECT -> KeyEvent.KEYCODE_BACK
         else -> keyCode
     }
 
@@ -285,7 +285,7 @@ open class LoaderActivity : Activity() {
         val handled = m_Gamepad.shouldForwardKey(event) && onKeyEvent(xperiaKeyCode(keyCode), action, event)
         return when {
             handled -> true
-            // B is reload only: never let Android turn an unclaimed B into system Back (pause).
+            // Never let Android turn an unclaimed B into system Back (pause).
             keyCode == KeyEvent.KEYCODE_BUTTON_B -> true
             // Select is Back: when the game doesn't claim it, fall back to Android's Back.
             keyCode == KeyEvent.KEYCODE_BUTTON_SELECT ->
