@@ -130,6 +130,9 @@ class s3eTouchpad {
         private const val S3E_MOVE = MotionEvent.ACTION_MOVE + 4
         private var virtualPad = false
         private val stickDown = booleanArrayOf(false, false)
+        // Right stick (finger 1) drives looking; tuned faster than a 1:1 stick-to-pad mapping.
+        private const val LOOK_POINTER = 1
+        private const val LOOK_GAIN = 1.5f
 
         /** True once the engine has initialised the touchpad and no physical one exists. */
         @JvmStatic
@@ -157,8 +160,20 @@ class s3eTouchpad {
             val radius = minOf(halfW, m_Height) / 2 - 1
             // Stick-up (negative AXIS_Y) must map to lower pad Y: tested on device, the
             // opposite sign flipped forward/back movement and inverted the look axis.
-            val x = cx + (ax * radius).toInt()
-            val y = cy + (ay * radius).toInt()
+            val x: Int
+            val y: Int
+            if (pointerId == LOOK_POINTER) {
+                // Look stick: extra gain plus the full width of the right half for turning, clamped
+                // so the finger never crosses into the movement half. Touch-screen looking is a
+                // separate path and unaffected; the in-game sensitivity option still scales this.
+                val rx = halfW / 2 - 1
+                val ry = m_Height / 2 - 1
+                x = (cx + (ax * LOOK_GAIN * rx).toInt()).coerceIn(halfW + 1, m_Width - 1)
+                y = (cy + (ay * LOOK_GAIN * ry).toInt()).coerceIn(0, m_Height - 1)
+            } else {
+                x = cx + (ax * radius).toInt()
+                y = cy + (ay * radius).toInt()
+            }
             if (active && !stickDown[pointerId]) {
                 onMotionEvent(pointerId, S3E_DOWN, cx, cy)
                 onMotionEvent(pointerId, S3E_MOVE, x, y)
