@@ -6,6 +6,8 @@ import android.os.Build
 import android.view.InputDevice
 import android.view.MotionEvent
 import android.view.ViewParent
+import kotlin.math.abs
+import kotlin.math.sqrt
 
 class s3eTouchpad {
     private var processPositionEvents = false
@@ -182,9 +184,17 @@ class s3eTouchpad {
          * The finger touches down when the stick leaves its dead zone and lifts when it returns.
          */
         @JvmStatic
-        fun updateVirtualStick(pointerId: Int, ax: Float, ay: Float, deadzone: Float) {
+        fun updateVirtualStick(pointerId: Int, stickX: Float, stickY: Float, deadzone: Float) {
             if (!virtualPad) return
-            val active = ax * ax + ay * ay > deadzone * deadzone
+            val active = stickX * stickX + stickY * stickY > deadzone * deadzone
+            // Sticks report a circle (a full diagonal is ~0.71 per axis) but the game reads the pad
+            // per axis, so stretch the circle onto the square: full diagonals reach the corner and
+            // move as fast as straight ahead; straight and partial pushes keep their feel.
+            val magnitude = sqrt(stickX * stickX + stickY * stickY)
+            val largest = maxOf(abs(stickX), abs(stickY))
+            val stretch = if (largest > 0f) magnitude / largest else 1f
+            val ax = (stickX * stretch).coerceIn(-1f, 1f)
+            val ay = (stickY * stretch).coerceIn(-1f, 1f)
             val halfW = m_Width / 2
             val cx = if (pointerId == 0) halfW / 2 else halfW + halfW / 2
             val cy = m_Height / 2
