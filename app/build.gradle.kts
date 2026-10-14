@@ -53,6 +53,13 @@ android {
         versionName = "1.0.8.1"
         versionNameSuffix = "kotlin"
         multiDexEnabled = false
+
+        // Package only the 32-bit libraries for every build type, not just release.
+        // boz.s3e is 32-bit ARM code; if arm64-v8a libs are packaged, 64-bit devices run
+        // the app as 64-bit and the engine starts with nothing it can run (black screen).
+        ndk {
+            abiFilters += listOf("armeabi-v7a")
+        }
     }
 
     buildTypes {
