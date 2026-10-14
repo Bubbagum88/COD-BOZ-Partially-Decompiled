@@ -24,6 +24,16 @@ jobs:
           yes | "$SDKMANAGER" --licenses > /dev/null
           "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
 
+      # gradle.properties is git-ignored upstream; provide the settings the build needs.
+      - name: Create gradle.properties
+        run: |
+          if [ ! -f gradle.properties ]; then
+            printf '%s\n' \
+              'org.gradle.jvmargs=-Xmx4g -Dfile.encoding=UTF-8' \
+              'android.useAndroidX=true' \
+              'kotlin.code.style=official' > gradle.properties
+          fi
+
       - name: Build debug APK
         run: |
           chmod +x gradlew
