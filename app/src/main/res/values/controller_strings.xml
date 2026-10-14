@@ -4,4 +4,11 @@
     <string name="controller_settings_title">Controller settings</string>
     <string name="controller_hud_label">Controller HUD</string>
     <string name="controller_hud_warning">Uses the compact controller layout with smaller on-screen buttons, so you can see more of the game. On-screen camera controls are disabled while it is on. Recommended when playing with a controller.\n\nApplies when a controller is connected as the game starts. If the HUD does not change straight away, restart the game.</string>
+    <string name="controller_ask_label">Ask when the game starts</string>
+
+    <string name="controller_hud_prompt_title">Controller detected</string>
+    <string name="controller_hud_prompt_message">Use the Controller HUD? It is a compact layout with smaller on-screen buttons, recommended for controllers. On-screen camera controls are disabled with it.\n\nYou can change this later: long-press the game icon and choose Controller settings.</string>
+    <string name="controller_hud_choice_controller">Controller HUD</string>
+    <string name="controller_hud_choice_touch">Touch HUD</string>
+    <string name="controller_hud_dont_ask">Don\'t ask again</string>
 </resources>

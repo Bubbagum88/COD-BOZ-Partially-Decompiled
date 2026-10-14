@@ -15,8 +15,12 @@ import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
 import android.view.WindowManager
+import android.widget.CheckBox
+import android.widget.FrameLayout
 import androidx.core.content.ContextCompat
+import com.activision.boz.R
 import com.ideaworks3d.marmalade.LoaderActivity
+import com.ideaworks3d.marmalade.s3eTouchpad
 import com.savegame.SavesRestoring
 import java.io.File
 
@@ -28,6 +32,8 @@ open class IsDeviceActivity : LoaderActivity() {
         private const val REQ_CODE_WRITE_STORAGE = 0x5354
         @JvmStatic
         private var m_Activity: IsDeviceActivity? = null
+        // Survives recreate() within the process, so the HUD question is asked once per launch.
+        private var hudAskedThisLaunch = false
 
         // Called by Marmalade's s3eLibraryLoad / libIsDevice.so.
         // Native code resolves this exact static symbol by name — do not rename.
@@ -152,15 +158,47 @@ open class IsDeviceActivity : LoaderActivity() {
         // the engine as a misleading "not enough storage" error).
         // super.onStart() must always be called (Android enforces this), so we
         // set the deferral flag first.
-        m_DeferLoader = needsStorageAccess()
+        m_DeferLoader = needsStorageAccess() || needsHudChoice()
         super.onStart()
         Log.v(TAG, "onStart")
-        if (m_DeferLoader) {
+        if (needsStorageAccess()) {
             Log.w(TAG, "Storage access not granted — prompting")
             promptForStorageAccess()
+        } else if (needsHudChoice()) {
+            promptHudChoice()
         } else {
             ensureObbDir()
         }
+    }
+
+    // Ask once per launch (when a controller is connected) whether to use the compact
+    // Controller HUD. The loader waits for the answer so the HUD is right from the start.
+    private fun needsHudChoice(): Boolean =
+        !hudAskedThisLaunch && s3eTouchpad.shouldAskHud(this) && s3eTouchpad.hasAnalogController()
+
+    private fun promptHudChoice() {
+        val dontAsk = CheckBox(this).apply { setText(R.string.controller_hud_dont_ask) }
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val box = FrameLayout(this).apply {
+            setPadding(pad, pad / 2, pad, 0)
+            addView(dontAsk)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.controller_hud_prompt_title)
+            .setMessage(R.string.controller_hud_prompt_message)
+            .setView(box)
+            .setCancelable(false)
+            .setPositiveButton(R.string.controller_hud_choice_controller) { _, _ -> applyHudChoice(true, dontAsk.isChecked) }
+            .setNegativeButton(R.string.controller_hud_choice_touch) { _, _ -> applyHudChoice(false, dontAsk.isChecked) }
+            .show()
+    }
+
+    private fun applyHudChoice(controllerHud: Boolean, dontAskAgain: Boolean) {
+        s3eTouchpad.setControllerHud(this, controllerHud)
+        if (dontAskAgain) s3eTouchpad.setAskHud(this, false)
+        hudAskedThisLaunch = true
+        // Same pattern as the storage prompt: recreate re-runs onStart and the loader starts.
+        recreate()
     }
 
     private fun needsStorageAccess(): Boolean =

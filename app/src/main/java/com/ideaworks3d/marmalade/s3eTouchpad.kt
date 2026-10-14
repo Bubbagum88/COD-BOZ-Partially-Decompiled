@@ -48,11 +48,6 @@ class s3eTouchpad {
         return true
     }
 
-    private fun hasAnalogController(): Boolean = InputDevice.getDeviceIds().any { id ->
-        val sources = InputDevice.getDevice(id)?.sources ?: 0
-        sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
-    }
-
     fun s3eTouchpadTerminate() {
         if (processPositionEvents) {
             setProcessPositionEvents(false)
@@ -140,7 +135,25 @@ class s3eTouchpad {
         // "Controller HUD" setting: when on, the virtual pad reports available (compact Xperia HUD).
         private const val PREFS = "controller"
         private const val KEY_CONTROLLER_HUD = "controller_hud"
+        private const val KEY_ASK_HUD = "ask_hud"
         @Volatile private var controllerHud = false
+
+        /** True when a controller with analog sticks is connected. */
+        @JvmStatic
+        fun hasAnalogController(): Boolean = InputDevice.getDeviceIds().any { id ->
+            val sources = InputDevice.getDevice(id)?.sources ?: 0
+            sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
+        }
+
+        /** Whether to ask Controller HUD vs Touch HUD at start-up (on by default). */
+        @JvmStatic
+        fun shouldAskHud(context: Context): Boolean =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ASK_HUD, true)
+
+        @JvmStatic
+        fun setAskHud(context: Context, ask: Boolean) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ASK_HUD, ask).apply()
+        }
 
         @JvmStatic
         fun isControllerHud(context: Context): Boolean =

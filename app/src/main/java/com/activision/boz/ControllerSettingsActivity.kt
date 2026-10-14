@@ -39,6 +39,16 @@ class ControllerSettingsActivity : Activity() {
             setPadding(0, dp(12), 0, 0)
         })
 
+        layout.addView(Switch(this).apply {
+            setText(R.string.controller_ask_label)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setPadding(0, dp(20), 0, 0)
+            isChecked = s3eTouchpad.shouldAskHud(this@ControllerSettingsActivity)
+            setOnCheckedChangeListener { _, checked ->
+                s3eTouchpad.setAskHud(this@ControllerSettingsActivity, checked)
+            }
+        })
+
         setContentView(layout)
     }
 
