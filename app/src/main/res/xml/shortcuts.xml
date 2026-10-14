@@ -4,7 +4,7 @@
         android:shortcutId="controller_settings"
         android:enabled="true"
         android:icon="@drawable/icon"
-        android:shortcutShortLabel="@string/controller_settings_short">
+        android:shortcutShortLabel="@string/controller_settings_title">
         <intent
             android:action="android.intent.action.VIEW"
             android:targetPackage="com.activision.boz"

@@ -30,9 +30,9 @@ open class IsDeviceActivity : LoaderActivity() {
         private const val TAG = "IsDeviceActivity"
         private const val REQ_CODE_ALL_FILES_ACCESS = 0x414c
         private const val REQ_CODE_WRITE_STORAGE = 0x5354
+        private const val KEY_HUD_ASKED = "hud_asked"
         @JvmStatic
         private var m_Activity: IsDeviceActivity? = null
-        private const val KEY_HUD_ASKED = "hud_asked"
 
         // Called by Marmalade's s3eLibraryLoad / libIsDevice.so.
         // Native code resolves this exact static symbol by name — do not rename.
@@ -133,9 +133,8 @@ open class IsDeviceActivity : LoaderActivity() {
             .show()
     }
 
-    // Per game screen, not per process: Android often keeps the process alive between boots,
-    // so a process-wide flag skipped the question on later launches. Carried only across the
-    // recreate() the prompt itself triggers (via saved state); every fresh boot asks again.
+    // Whether the HUD question was answered for this game screen. Kept across the prompt's own
+    // recreate() via saved state (not per process, which can outlive a boot), so each boot asks.
     private var hudAskedThisLaunch = false
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -181,8 +180,8 @@ open class IsDeviceActivity : LoaderActivity() {
         }
     }
 
-    // Ask once per launch (when a controller is connected) whether to use the compact
-    // Controller HUD. The loader waits for the answer so the HUD is right from the start.
+    // With a controller connected, ask each boot which HUD to use (unless "Don't ask again").
+    // The loader waits for the answer so the HUD is right from the start.
     private fun needsHudChoice(): Boolean =
         !hudAskedThisLaunch && s3eTouchpad.shouldAskHud(this) && s3eTouchpad.hasAnalogController()
 

@@ -58,10 +58,9 @@ class s3eTouchpad {
         if (prop == S3E_TOUCHPAD_AVAILABLE) {
             LoaderAPI.trace("Touchpad GetInt S3E_TOUCHPAD_AVAILABLE")
             if (inputDeviceId == -1) return 0
-            // The virtual pad reports "not available" by default, like the original game.
-            // "Available" only switches the HUD into the compact Xperia layout and locks touch to
-            // dual-stick (with a dead on-screen camera stick); the engine reads the sticks either
-            // way. The player opts in via Controller settings (ControllerSettingsActivity).
+            // Virtual pad: "not available" keeps the original HUD and all touch schemes; "available"
+            // switches to the compact Xperia HUD and disables the on-screen camera stick. The engine
+            // reads the sticks either way, so this only follows the player's Controller HUD choice.
             if (inputDeviceId == VIRTUAL_DEVICE_ID) return if (controllerHud) 1 else 0
             val cfg: Configuration = LoaderActivity.m_Activity!!.resources.configuration
             val legacyId = "3.0.A.2."
@@ -128,7 +127,7 @@ class s3eTouchpad {
         private const val S3E_MOVE = MotionEvent.ACTION_MOVE + 4
         private var virtualPad = false
         private val stickDown = booleanArrayOf(false, false)
-        // Right stick (finger 1) drives looking; tuned faster than a 1:1 stick-to-pad mapping.
+        // Right stick (finger 1) looks around, with a gain over the 1:1 stick-to-pad mapping.
         private const val LOOK_POINTER = 1
         private const val LOOK_GAIN = 1.5f
 
@@ -145,24 +144,24 @@ class s3eTouchpad {
             sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
         }
 
+        private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
         /** Whether to ask Controller HUD vs Touch HUD at start-up (on by default). */
         @JvmStatic
-        fun shouldAskHud(context: Context): Boolean =
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_ASK_HUD, true)
+        fun shouldAskHud(context: Context): Boolean = prefs(context).getBoolean(KEY_ASK_HUD, true)
 
         @JvmStatic
         fun setAskHud(context: Context, ask: Boolean) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_ASK_HUD, ask).apply()
+            prefs(context).edit().putBoolean(KEY_ASK_HUD, ask).apply()
         }
 
         @JvmStatic
-        fun isControllerHud(context: Context): Boolean =
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CONTROLLER_HUD, false)
+        fun isControllerHud(context: Context): Boolean = prefs(context).getBoolean(KEY_CONTROLLER_HUD, false)
 
         /** Saves the setting and applies it to the running game's next availability query. */
         @JvmStatic
         fun setControllerHud(context: Context, on: Boolean) {
-            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CONTROLLER_HUD, on).apply()
+            prefs(context).edit().putBoolean(KEY_CONTROLLER_HUD, on).apply()
             controllerHud = on
         }
 
@@ -190,14 +189,12 @@ class s3eTouchpad {
             val cx = if (pointerId == 0) halfW / 2 else halfW + halfW / 2
             val cy = m_Height / 2
             val radius = minOf(halfW, m_Height) / 2 - 1
-            // Stick-up (negative AXIS_Y) must map to lower pad Y: tested on device, the
-            // opposite sign flipped forward/back movement and inverted the look axis.
+            // Pad Y follows stick Y: stick up (negative AXIS_Y) is a lower pad Y.
             val x: Int
             val y: Int
             if (pointerId == LOOK_POINTER) {
-                // Look stick: a flat gain on both axes, clamped so the finger stays on the pad and
-                // never crosses into the movement half. Touch-screen looking is a separate path and
-                // unaffected; the in-game sensitivity option still scales this.
+                // Look gain on both axes, clamped to the pad's right half so the finger never
+                // crosses into the movement half. The in-game sensitivity still scales this.
                 x = (cx + (ax * LOOK_GAIN * radius).toInt()).coerceIn(halfW + 1, m_Width - 1)
                 y = (cy + (ay * LOOK_GAIN * radius).toInt()).coerceIn(0, m_Height - 1)
             } else {
