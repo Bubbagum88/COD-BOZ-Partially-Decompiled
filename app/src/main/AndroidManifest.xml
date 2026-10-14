@@ -6,7 +6,9 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts"/>
         </activity>
+        <activity android:exported="true" android:label="@string/controller_settings_title" android:name="com.activision.boz.ControllerSettingsActivity" android:theme="@android:style/Theme.DeviceDefault.Dialog"/>
         <provider android:authorities="zzzz3cbc70bb20f852f289fb0ebc606135c5.VFSProvider" android:exported="false" android:multiprocess="true" android:name="com.ideaworks3d.marmalade.VFSProvider"/>
         <service android:name="com.ideaworks3d.marmalade.s3eAndroidMarketBilling.s3eAndroidMarketBilling"/>
         <receiver android:exported="false" android:name="com.ideaworks3d.marmalade.s3eAndroidMarketBilling.s3eAndroidMarketBillingReceiver">

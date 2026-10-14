@@ -1,5 +1,6 @@
 package com.ideaworks3d.marmalade
 
+import android.content.Context
 import android.content.res.Configuration
 import android.os.Build
 import android.view.InputDevice
@@ -42,6 +43,7 @@ class s3eTouchpad {
         m_Height = VIRTUAL_HEIGHT
         inputDeviceId = VIRTUAL_DEVICE_ID
         virtualPad = true
+        controllerHud = isControllerHud(LoaderActivity.m_Activity!!)
         trace("No touchpad found; using virtual stick pad m_Width: $m_Width m_Height: $m_Height")
         return true
     }
@@ -61,10 +63,11 @@ class s3eTouchpad {
         if (prop == S3E_TOUCHPAD_AVAILABLE) {
             LoaderAPI.trace("Touchpad GetInt S3E_TOUCHPAD_AVAILABLE")
             if (inputDeviceId == -1) return 0
-            // The virtual pad always reports "not available", like the original game. "Available"
-            // only switches the HUD into the Xperia layout and locks touch to dual-stick (with a
-            // dead on-screen camera stick); the engine reads the stick input either way.
-            if (inputDeviceId == VIRTUAL_DEVICE_ID) return 0
+            // The virtual pad reports "not available" by default, like the original game.
+            // "Available" only switches the HUD into the compact Xperia layout and locks touch to
+            // dual-stick (with a dead on-screen camera stick); the engine reads the sticks either
+            // way. The player opts in via Controller settings (ControllerSettingsActivity).
+            if (inputDeviceId == VIRTUAL_DEVICE_ID) return if (controllerHud) 1 else 0
             val cfg: Configuration = LoaderActivity.m_Activity!!.resources.configuration
             val legacyId = "3.0.A.2."
             try {
@@ -133,6 +136,22 @@ class s3eTouchpad {
         // Right stick (finger 1) drives looking; tuned faster than a 1:1 stick-to-pad mapping.
         private const val LOOK_POINTER = 1
         private const val LOOK_GAIN = 1.5f
+
+        // "Controller HUD" setting: when on, the virtual pad reports available (compact Xperia HUD).
+        private const val PREFS = "controller"
+        private const val KEY_CONTROLLER_HUD = "controller_hud"
+        @Volatile private var controllerHud = false
+
+        @JvmStatic
+        fun isControllerHud(context: Context): Boolean =
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_CONTROLLER_HUD, false)
+
+        /** Saves the setting and applies it to the running game's next availability query. */
+        @JvmStatic
+        fun setControllerHud(context: Context, on: Boolean) {
+            context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putBoolean(KEY_CONTROLLER_HUD, on).apply()
+            controllerHud = on
+        }
 
         /** True once the engine has initialised the touchpad and no physical one exists. */
         @JvmStatic

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="controller_settings_short">Controller settings</string>
+    <string name="controller_settings_title">Controller settings</string>
+    <string name="controller_hud_label">Controller HUD</string>
+    <string name="controller_hud_warning">Uses the compact controller layout with smaller on-screen buttons, so you can see more of the game. On-screen camera controls are disabled while it is on. Recommended when playing with a controller.\n\nApplies when a controller is connected as the game starts. If the HUD does not change straight away, restart the game.</string>
+</resources>
