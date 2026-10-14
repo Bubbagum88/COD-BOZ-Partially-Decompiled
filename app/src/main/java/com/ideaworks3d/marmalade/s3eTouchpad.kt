@@ -32,13 +32,23 @@ class s3eTouchpad {
                 }
             }
         }
-        // No physical touchpad: expose a virtual Xperia Play-sized pad driven by the analog sticks.
+        // No physical touchpad. Without a controller, behave exactly as before; with one,
+        // expose a virtual Xperia Play-sized pad driven by its analog sticks.
+        if (!hasAnalogController()) {
+            trace("Couldn't detect touchpad or analog controller")
+            return false
+        }
         m_Width = VIRTUAL_WIDTH
         m_Height = VIRTUAL_HEIGHT
         inputDeviceId = VIRTUAL_DEVICE_ID
         virtualPad = true
         trace("No touchpad found; using virtual stick pad m_Width: $m_Width m_Height: $m_Height")
         return true
+    }
+
+    private fun hasAnalogController(): Boolean = InputDevice.getDeviceIds().any { id ->
+        val sources = InputDevice.getDevice(id)?.sources ?: 0
+        sources and InputDevice.SOURCE_JOYSTICK == InputDevice.SOURCE_JOYSTICK
     }
 
     fun s3eTouchpadTerminate() {
