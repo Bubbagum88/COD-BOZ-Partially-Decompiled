@@ -53,22 +53,22 @@ class s3eTouchpad {
     }
 
     // Test switch, flipped live over ADB without rebuilding:
-    //   adb shell run-as com.activision.boz touch files/pad_hidden   -> virtual pad reports unavailable
-    //   adb shell run-as com.activision.boz rm files/pad_hidden      -> back to available
-    // Shows whether the engine still reads the sticks when the pad is "unavailable"
-    // (touch schemes and controller together) or needs a live switch between them.
-    private var padHiddenCheckedAt = 0L
-    private var padHidden = false
+    //   adb shell run-as com.activision.boz touch files/pad_shown   -> virtual pad reports available
+    //   adb shell run-as com.activision.boz rm files/pad_shown      -> back to the default (not available)
+    // "Available" makes the game lock into its pad scheme (touch schemes and the on-screen
+    // camera stick stop working), so it is only kept for comparison.
+    private var padShownCheckedAt = 0L
+    private var padShown = false
 
-    private fun isPadHidden(): Boolean {
+    private fun isPadShown(): Boolean {
         val now = SystemClock.uptimeMillis()
-        if (now - padHiddenCheckedAt > 1000) {
-            padHiddenCheckedAt = now
-            val hidden = File(LoaderActivity.m_Activity!!.filesDir, "pad_hidden").exists()
-            if (hidden != padHidden) Log.i(LOG_TAG, "pad_hidden test switch -> $hidden")
-            padHidden = hidden
+        if (now - padShownCheckedAt > 1000) {
+            padShownCheckedAt = now
+            val shown = File(LoaderActivity.m_Activity!!.filesDir, "pad_shown").exists()
+            if (shown != padShown) Log.i(LOG_TAG, "pad_shown test switch -> $shown")
+            padShown = shown
         }
-        return padHidden
+        return padShown
     }
 
     private fun hasAnalogController(): Boolean = InputDevice.getDeviceIds().any { id ->
@@ -91,7 +91,9 @@ class s3eTouchpad {
                 Log.i(LOG_TAG, "AVAILABLE query #$availableQueries (device=$inputDeviceId)")
             }
             if (inputDeviceId == -1) return 0
-            if (inputDeviceId == VIRTUAL_DEVICE_ID) return if (isPadHidden()) 0 else 1
+            // Virtual pad reports "not available" by default, like the original game, so the
+            // touch-control schemes stay intact; the sticks still feed it via onMotionEvent.
+            if (inputDeviceId == VIRTUAL_DEVICE_ID) return if (isPadShown()) 1 else 0
             val cfg: Configuration = LoaderActivity.m_Activity!!.resources.configuration
             val legacyId = "3.0.A.2."
             try {
