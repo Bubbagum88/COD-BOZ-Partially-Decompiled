@@ -132,6 +132,8 @@ class s3eTouchpad {
         // Right stick (finger 1) looks around, with a gain over the 1:1 stick-to-pad mapping.
         private const val LOOK_POINTER = 1
         private const val LOOK_GAIN = 1.5f
+        // Left stick (finger 0) movement gain on top of the circle-to-square stretch.
+        private const val MOVE_GAIN = 1.5f
 
         // "Controller HUD" setting: when on, the virtual pad reports available (compact Xperia HUD).
         private const val PREFS = "controller"
@@ -192,7 +194,9 @@ class s3eTouchpad {
             // move as fast as straight ahead; straight and partial pushes keep their feel.
             val magnitude = sqrt(stickX * stickX + stickY * stickY)
             val largest = maxOf(abs(stickX), abs(stickY))
-            val stretch = if (largest > 0f) magnitude / largest else 1f
+            // Movement also gets a 1.5x gain, clamped to the same square (1:1 on both axes).
+            val gain = if (pointerId == LOOK_POINTER) 1f else MOVE_GAIN
+            val stretch = (if (largest > 0f) magnitude / largest else 1f) * gain
             val ax = (stickX * stretch).coerceIn(-1f, 1f)
             val ay = (stickY * stretch).coerceIn(-1f, 1f)
             val halfW = m_Width / 2
