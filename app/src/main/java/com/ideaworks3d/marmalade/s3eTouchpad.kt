@@ -132,8 +132,11 @@ class s3eTouchpad {
         // Right stick (finger 1) looks around, with a gain over the 1:1 stick-to-pad mapping.
         private const val LOOK_POINTER = 1
         private const val LOOK_GAIN = 1.5f
-        // Left stick (finger 0) movement gain on top of the circle-to-square stretch.
-        private const val MOVE_GAIN = 1.5f
+        // Where the game expects each stick's centre, as fractions of the pad (blackops_loader.dz:
+        // leftStickCenter = 0.2, 0.5 and rightStickCenter = 0.8, 0.5).
+        private const val LEFT_CENTER_X = 0.2f
+        private const val RIGHT_CENTER_X = 0.8f
+        private const val CENTER_Y = 0.5f
 
         // "Controller HUD" setting: when on, the virtual pad reports available (compact Xperia HUD).
         private const val PREFS = "controller"
@@ -182,7 +185,7 @@ class s3eTouchpad {
         }
 
         /**
-         * Left stick = finger 0 on the left half of the pad, right stick = finger 1 on the right half.
+         * Left stick = finger 0 around the game's left stick centre, right stick = finger 1 around the right one.
          * The finger touches down when the stick leaves its dead zone and lifts when it returns.
          */
         @JvmStatic
@@ -194,23 +197,24 @@ class s3eTouchpad {
             // move as fast as straight ahead; straight and partial pushes keep their feel.
             val magnitude = sqrt(stickX * stickX + stickY * stickY)
             val largest = maxOf(abs(stickX), abs(stickY))
-            // Movement also gets a 1.5x gain, clamped to the same square (1:1 on both axes).
-            val gain = if (pointerId == LOOK_POINTER) 1f else MOVE_GAIN
-            val stretch = (if (largest > 0f) magnitude / largest else 1f) * gain
+            val stretch = if (largest > 0f) magnitude / largest else 1f
             val ax = (stickX * stretch).coerceIn(-1f, 1f)
             val ay = (stickY * stretch).coerceIn(-1f, 1f)
             val halfW = m_Width / 2
-            val cx = if (pointerId == 0) halfW / 2 else halfW + halfW / 2
-            val cy = m_Height / 2
+            // Stick centres from the game's own data (leftStickCenter / rightStickCenter).
+            val cx = (m_Width * if (pointerId == LOOK_POINTER) RIGHT_CENTER_X else LEFT_CENTER_X).toInt()
+            val cy = (m_Height * CENTER_Y).toInt()
             val radius = minOf(halfW, m_Height) / 2 - 1
             // Pad Y follows stick Y: stick up (negative AXIS_Y) is a lower pad Y.
             val x: Int
             val y: Int
             if (pointerId == LOOK_POINTER) {
-                // Look gain on both axes, clamped to the pad's right half so the finger never
-                // crosses into the movement half. The in-game sensitivity still scales this.
-                x = (cx + (ax * LOOK_GAIN * radius).toInt()).coerceIn(halfW + 1, m_Width - 1)
-                y = (cy + (ay * LOOK_GAIN * radius).toInt()).coerceIn(0, m_Height - 1)
+                // Look gain on both axes, clamped evenly around the centre and inside the pad's
+                // right half, so left and right reach equally far. In-game sensitivity still scales this.
+                val reachX = minOf(cx - halfW - 1, m_Width - 1 - cx)
+                val reachY = minOf(cy, m_Height - 1 - cy)
+                x = cx + (ax * LOOK_GAIN * radius).toInt().coerceIn(-reachX, reachX)
+                y = cy + (ay * LOOK_GAIN * radius).toInt().coerceIn(-reachY, reachY)
             } else {
                 x = cx + (ax * radius).toInt()
                 y = cy + (ay * radius).toInt()
